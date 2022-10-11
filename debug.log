@@ -1,0 +1,2 @@
+[20/04/2016 18:44:50][sigma.php]SELECT cd_cliente, particao, id_empresa FROM dbCENTRAL WHERE ID_CENTRAL = '7000'
+[20/04/2016 18:44:50][sigma.php]SELECT cd_cliente, particao, id_empresa FROM dbCENTRAL WHERE ID_CENTRAL = '7000'
