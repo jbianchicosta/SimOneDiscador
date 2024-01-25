@@ -4,11 +4,8 @@ include_once("conexao_funcoes.php");
 //$conn = false;
 
 $base = "moniligacao";
-
-$senha_mysql = 'invi.5040@2';
-
+$senha_mysql = 'one1837@2';
 $conn = mysqli_connect('localhost', 'root', $senha_mysql);
-
 $titulo_pagina = 'Discador Moni';
 
 	// Check connection

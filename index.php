@@ -75,7 +75,7 @@ if ($l_BaixarGravacao == "sigma") {
 
 	if (count($extensao) > 0) {
 		if (in_array($extensao['extension'], $bloquados)) {
-			$retorno = array("status" => "error", "cause" => "Arquivo com extens�o n�o permitida");
+			$retorno = array("status" => "error", "cause" => "Arquivo com extensão não permitida");
 		} else {
 			if (isset($arquivo) && file_exists($arquivo)) {
 				switch (strtolower(substr(strrchr(basename($arquivo), "."), 1))) {
@@ -167,6 +167,7 @@ if (strlen($l_sigma) == 7) { // recebe get do asterisk ?sigma=setor+conta_client
 
 	$sql = "INSERT INTO CHAMADA_EVENTO (CD_EVENTO,CD_CHAMADA,DT_CHAMADA,NU_TELEFONE) VALUES ('$y_CD_HISTORICO','$l_gravacao','$data','$l_interfone')";
 	executa_mssql($sql);
+	
 } else if ($chave == $l_key & isset($l_RAMAL)) {
 
 	$sql = "INSERT INTO `LIGACOES` (CD_CHAMADA, `NUM_RAMAL` , `NUM_TELEFONE` ,`DT_INCLUSAO`, `DT_LIGACAO_EFETUADA`, `FG_LIGACAO_CONCLUIDA` ,`CIDADE` , `UF`) VALUES (cd_chamada, '$l_RAMAL', '$l_TELEFONE', NOW() , '', '', '$l_CIDADE', '$l_UF' )";
