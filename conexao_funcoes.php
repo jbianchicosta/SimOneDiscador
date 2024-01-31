@@ -8,7 +8,7 @@ function num_colunas($rs) {
 }
 
 function consulta($conn, $sql, $msg = false) {
-	$r = mysqli_query($conn, $sql) or ( $msg ? die("Erro !!!<br><br>".mysqli_error()) : false );
+	$r = mysqli_query($conn, $sql) or ( $msg ? die("Erro !!!<br><br>".mysqli_error($conn)) : false );
 	return $r;
 }
 
@@ -41,7 +41,7 @@ function desconecta($conn) {
 function executa($conn, $sql, $msgErro = false) {
 	$res = mysqli_query($conn, $sql);
 	if ( !$res and $msgErro ):
-		 die("Erro !!: <br><br>".mysqli_error()); // $sql
+		 die("Erro !!: <br><br>".mysqli_error($conn)); // $sql
 	endif;
 	return $res;
 }

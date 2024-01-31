@@ -34,22 +34,36 @@ $ID_CLIENTE = $argv[8];
 
 extract($_GET, EXTR_PREFIX_ALL, "l");
 
-if ($l_BaixarGravacao == "sigma") {
+if ($l_BaixarGravacao == "sigma" || $l_BaixarGravacao == "sim") {
 
-	$cdr_conn = mysqli_connect('localhost', 'root', $senha_mysql, 'asteriskcdrdb');
+	//$cdr_conn = mysql_connect('localhost', 'root', $senha_mysql, 'asteriskcdrdb');
 
-	$cdr_sql = "select * from cdr where uniqueid='$l_ID' order by calldate desc limit 1";
+	$cdr_sql = "select * from asteriskcdrdb.cdr where uniqueid='$l_ID' order by calldate desc limit 1";
 
-	$cdr_dados = consulta_registro($cdr_conn, $cdr_sql);
+	$cdr_dados = consulta_registro($cdr_sql, false);
+	//echo $cdr_sql;
 
-	if ($cdr_dados) {
+	if ($cdr_dados != NULL) {
 		extract($cdr_dados, EXTR_PREFIX_ALL, "cdr");
-		$retorno = array("status" => "ok", "cause" => "Id da Ligacao: $cdr_uniqueid");
+		$retorno = array("status" => "ok", "cause" => "Id cdr da Ligacao: $cdr_uniqueid");
 		echo json_encode($retorno);
 		//echo $p_CD_CHAMADA;
 		//echo json_encode($retorno); // resultado da ultima chamada aqui
-		//desconecta($conn);
+		desconecta($conn);
 	}
+	if ($cdr_dados == NULL) {
+		$sql = "select * from asteriskcdrdb.cdr where uniqueid = (select arquivo recordingfile from moniligacao.LIGACOES where cd_chamada='$l_ID' order by cd_chamada desc limit 1)";
+		$grav_dados = consulta_registro($sql, false);
+		extract($grav_dados, EXTR_PREFIX_ALL, "cdr");
+		$retorno = array("status" => "ok", "cause" => "Id da Ligacao: $grav_dados_cd_chamada");
+		echo json_encode($retorno);
+		//echo $sql;
+		//echo $p_CD_CHAMADA;
+		//echo json_encode($retorno); // resultado da ultima chamada aqui
+		desconecta($conn);
+		//var_dump($grav_dados);
+	}
+
 
 	$diretorio = "/var/spool/asterisk/monitor/";
 
@@ -120,7 +134,7 @@ if ($l_BaixarGravacao == "sigma") {
 			}
 		}
 	} else {
-		$retorno = array("status" => "error", "cause" => "Link inv�lido: " . $arquivo);
+		$retorno = array("status" => "error", "cause" => "Link inválido: " . $arquivo);
 	}
 
 	if ($l_debug == true) {
@@ -128,6 +142,7 @@ if ($l_BaixarGravacao == "sigma") {
 		echo "<BR>";
 		echo "BaixarGravacao" . "<BR>";
 		echo "SQL : " . $cdr_sql . "<BR>";
+		echo "SQL 2: " . $sql . "<BR>";
 		echo "ID : " . $l_ID . "<BR>";
 		echo "Data Gravacao : " . $cdr_calldate . "<BR>";
 		echo "Diretorio de gravacao : " . $arquivo . "<BR>";
@@ -139,6 +154,7 @@ if ($l_BaixarGravacao == "sigma") {
 	}
 	desconecta($cdr_conn);
 	//break;
+	return;
 }
 
 if (strlen($l_sigma) == 7) { // recebe get do asterisk ?sigma=setor+conta_cliente
@@ -167,18 +183,19 @@ if (strlen($l_sigma) == 7) { // recebe get do asterisk ?sigma=setor+conta_client
 
 	$sql = "INSERT INTO CHAMADA_EVENTO (CD_EVENTO,CD_CHAMADA,DT_CHAMADA,NU_TELEFONE) VALUES ('$y_CD_HISTORICO','$l_gravacao','$data','$l_interfone')";
 	executa_mssql($sql);
-	
 } else if ($chave == $l_key & isset($l_RAMAL)) {
 
-	$sql = "INSERT INTO `LIGACOES` (CD_CHAMADA, `NUM_RAMAL` , `NUM_TELEFONE` ,`DT_INCLUSAO`, `DT_LIGACAO_EFETUADA`, `FG_LIGACAO_CONCLUIDA` ,`CIDADE` , `UF`) VALUES (cd_chamada, '$l_RAMAL', '$l_TELEFONE', NOW() , '', '', '$l_CIDADE', '$l_UF' )";
-	executa($conn, $sql);
+	$sql = "INSERT INTO moniligacao.LIGACOES (CD_CHAMADA, NUM_RAMAL , NUM_TELEFONE ,DT_INCLUSAO, DT_LIGACAO_EFETUADA, FG_LIGACAO_CONCLUIDA ,CIDADE , UF) VALUES (cd_chamada, '$l_RAMAL', '$l_TELEFONE', NOW() , '', '', '$l_CIDADE', '$l_UF' )";
+	executa($sql, false);
 	/*	echo "$l_key";	echo "$l_TELEFONE..."; */
-	$sql = "SELECT CD_CHAMADA,NUM_TELEFONE,DT_INCLUSAO FROM LIGACOES WHERE NUM_RAMAL='$l_RAMAL' ORDER BY DT_INCLUSAO DESC LIMIT 1";
-	$dados = consulta_registro($conn, $sql);
+	$sql = "SELECT CD_CHAMADA,NUM_TELEFONE,DT_INCLUSAO FROM moniligacao.LIGACOES WHERE NUM_RAMAL='$l_RAMAL' ORDER BY DT_INCLUSAO DESC LIMIT 1";
+	$dados = consulta_registro($sql);
 
 	if ($dados) {
+		$webroot = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+		$ip_central = "http://". $_SERVER['SERVER_ADDR'] . $webroot . "?BaixarGravacao=sim&ID=";
 		extract($dados, EXTR_PREFIX_ALL, "p");
-		$retorno = array("status" => "ok", "cause" => "Id da Ligacao: $p_CD_CHAMADA");
+		$retorno = array("status" => "ok", "cause" => "Id da Ligacao: $p_CD_CHAMADA", "urlAudio => $ip_central$p_CD_CHAMADA");
 		echo json_encode($retorno);
 		//echo $p_CD_CHAMADA;
 		//echo json_encode($retorno); // resultado da ultima chamada aqui
@@ -258,8 +275,23 @@ if (strlen($l_sigma) == 7) { // recebe get do asterisk ?sigma=setor+conta_client
 	//$l_numero_discado = str_replace(array('\'', '"', ',', ';', '<', '>'), ' ', $l_TELEFONE);
 
 
+} else if ($l_SimCloud == "sim") {
+	extract($_GET, EXTR_PREFIX_ALL, "cloud");
+
+	$sql = "SELECT CD_CHAMADA FROM moniligacao.LIGACOES WHERE NUM_RAMAL='$cloud_RamalUsuario' AND ARQUIVO IS NULL ORDER BY DT_INCLUSAO DESC LIMIT 1";
+	$cloud_cd_chamada = consulta_registro($sql, false);
+
+	//echo json_encode($cloud_uniqueid);
+	//echo "cloud_cd_chamada ".$sql."\n";
+	//echo "cloud_cd_chamada ".$cloud_cd_chamada['CD_CHAMADA']."\n";
+	//echo "cloud_AudioGravacao ".$cloud_AudioGravacao."\n";
+	//echo "cloud_RamalUsuario ".$cloud_RamalUsuario."\n";
+	$update = "UPDATE moniligacao.LIGACOES set ARQUIVO='$cloud_AudioGravacao' where CD_CHAMADA='$cloud_cd_chamada[CD_CHAMADA]' AND NUM_RAMAL='$cloud_RamalUsuario'";
+	//echo "update ".$update;
+	executa($update, false);
+
 } else {
-	echo ("Erro!");
+	echo ("Erro ao atualizar chamada ou faltando a chave key, ou ramal e telefone não informado!");
 }
 
 function discar()
@@ -298,7 +330,7 @@ function discar()
 		//"\nSet: PassedInfo=" . $dddtel .
 		"\nSet: PassedInfo=" .
 		"\nPriority: " . $priority;
-	"\nApplication: Dial " .
+		"\nApplication: Dial " .
 
 		//ARQUIVO TXT
 		$arquivo = $spool_dir . $l_TELEFONE . ".call";
@@ -321,35 +353,4 @@ function discar()
 	//shell_exec("sudo mv /tmp/outgoing/$telefone.call /var/spool/asterisk/outgoing/$telefone.call");
 
 	fclose($abrir);
-
-	$post_oini = curl_init();
-	$post_oint = curl_init();
-
-	//$url_oint = "http://192.168.250.235:8080/SigmaWebServices/notifyCall?userfield=$l_RAMAL&clientid=$l_ID_CLIENTE&exten=$l_RAMAL&eventid=OINT&callerid=$l_TELEFONE";
-	//$url_oint = "http://192.168.250.110/wsOnePortaria/?tag=0&evento=OINI&conta=$l_ID_CENTRAL&auxiliar=$l_AUXILIAR";
-	if ($l_TELEFONE > 1000 && $l_TELEFONE <= 3999) {
-		//	$url_oini = "http://192.168.250.110/wsOnePortaria/?tag=0&evento=OINI&conta=$l_ID_CENTRAL&auxiliar=$l_AUXILIAR";
-		echo $url_oini, "\n";
-		echo $url_oint;
-	} else {
-		//	 $url_oini = "http://192.168.250.101/wsOnePortaria/?tag=0&evento=OLIG&conta=$l_ID_CENTRAL&auxiliar=$l_AUXILIAR";
-		//$url_oini = "http://192.168.250.235:8080/SigmaWebServices/notifyCall?userfield=$l_RAMAL&clientid=$l_ID_CLIENTE&exten=$l_RAMAL&eventid=OINI&callerid=$l_TELEFONE";
-	}
-
-	curl_setopt($post_oini, CURLOPT_URL, $url_oini);
-	curl_setopt($post_oint, CURLOPT_URL, $url_oint);
-	//curl_setopt($post, CURLOPT_POST, 1);
-	//curl_setopt($post, CURLOPT_POSTFIELDS, $fields);
-	curl_setopt($post_oini, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($post_oint, CURLOPT_RETURNTRANSFER, true);
-
-	$result_oini = curl_exec($post_oini);
-	$result_oint = curl_exec($post_oint);
-
-	//if($result == false){
-	//    die('Error ' . curl_error($post));
-	//}
-	curl_close($post_oint);
-	curl_close($post_oini);
-	//return $result;
 }

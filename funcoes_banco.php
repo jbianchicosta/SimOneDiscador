@@ -1,6 +1,6 @@
 <?php
 if ( !isset($tipo_db) || empty($tipo_db) ):
-	$tipo_db = "sqlsrv";	// sqlsrv // mssql
+	$tipo_db = "mysql";	// sqlsrv // mssql
 endif;
 	
 require_once("funcoes_" . $tipo_db . ".php");
@@ -23,7 +23,7 @@ function gravaLog($err){
 	else
 		$barra = "/";
 		
-	$arq = fopen(dirname(__FILE__).$barra."sql.log", "a+");
+	$arq = fopen(dirname(__FILE__).$barra."sql.log", "w+");
 	$nome_arq = end(explode("/",$_SERVER["SCRIPT_FILENAME"]));
 	$esc = fwrite($arq, "[".date("d/m/Y H:i:s")."][".$nome_arq."]".$err.PHP_EOL);
 	fclose($arq);   	
