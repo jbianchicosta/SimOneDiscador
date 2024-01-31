@@ -278,7 +278,7 @@ if (strlen($l_sigma) == 7) { // recebe get do asterisk ?sigma=setor+conta_client
 } else if ($l_SimCloud == "sim") {
 	extract($_GET, EXTR_PREFIX_ALL, "cloud");
 
-	$sql = "SELECT CD_CHAMADA FROM moniligacao.LIGACOES WHERE NUM_RAMAL='$cloud_RamalUsuario' AND ARQUIVO IS NULL ORDER BY DT_INCLUSAO DESC LIMIT 1";
+	$sql = "SELECT CD_CHAMADA FROM moniligacao.LIGACOES WHERE NUM_RAMAL='$cloud_RamalUsuario' (ARQUIVO IS NULL OR ARQUIVO LIKE '') ORDER BY DT_INCLUSAO DESC LIMIT 1";
 	$cloud_cd_chamada = consulta_registro($sql, false);
 
 	//echo json_encode($cloud_uniqueid);
